@@ -1,0 +1,5 @@
+pe-bear (0.7.0+232025-1) UNRELEASED; urgency=medium
+
+  * Initial release. (Closes: #nnnn)  <nnnn is the bug number of your ITP>
+
+ -- Joe <joeubuntuserver@unknown>  Sun, 23 Mar 2025 15:21:15 +0000

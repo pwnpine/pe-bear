@@ -1,0 +1,137 @@
+version: '{branch}.{build}'
+skip_tags: true
+
+image:
+- Visual Studio 2022
+- Visual Studio 2019
+- Ubuntu2204
+- macos
+
+matrix:
+  exclude:
+    - platform: x86
+      image: Visual Studio 2022
+    - platform: x64
+      image: Visual Studio 2019
+    - platform: x86
+      image: macOS
+    - platform: x86
+      image: Ubuntu2204
+    - configuration: Debug
+      image: macOS
+    - configuration: Debug
+      image: Ubuntu2204
+      
+platform:
+  - x64
+  - x86
+  
+configuration:
+  - Release
+  - Debug
+
+branches:
+  only:
+    - main
+
+build:
+  verbosity: detailed
+
+environment:
+  artifactName: $(APPVEYOR_PROJECT_NAME)-$(APPVEYOR_REPO_COMMIT)-$(CONFIGURATION)-$(PLATFORM)
+  buildConfig: $(CONFIGURATION)
+  buildPlatform: $(PLATFORM)
+  
+for:  
+  -
+    matrix:
+      only:
+        - image: Ubuntu2204
+
+    install:
+     - git submodule update --init --recursive
+     - export PATH="$HOME/Qt/6.7.2/gcc_64/bin:$PATH"
+
+    before_build:
+      - cmake --version
+
+    build_script:
+      - ./build_qt6.sh
+
+    after_build:
+       - ls
+       - cd build_qt6
+       - tar -czvf ../PE-bear.tar.gz bin/PE-bear
+       - cd ..
+
+    artifacts:
+       - path: PE-bear.tar.gz
+       
+  -
+    matrix:
+      only:
+        - image: macOS
+
+    install:
+     - git submodule update --init --recursive
+     - export PATH="$HOME/Qt/6.6.1/macos/bin:$PATH"
+     - export LDFLAGS="-L/usr/local/opt/qt/lib"
+     - export CPPFLAGS="-I/usr/local/opt/qt/include"
+     - export PKG_CONFIG_PATH="/usr/local/opt/qt/lib/pkgconfig"
+
+    before_build:
+      - cmake --version
+      - qmake -v
+
+    build_script:
+      - ./macos_wrap.sh macdeployqt
+
+    after_build:
+       - ls
+
+    artifacts:
+       - path: PE-bear.app.zip
+      
+  -
+    matrix:
+      only:
+        - image: Visual Studio 2022
+        - image: Visual Studio 2019
+        
+    install:
+     - git submodule update --init --recursive
+     - if [%buildPlatform%]==[x64] (set QT_VER=6)
+     - if [%buildPlatform%]==[x64] (set QT=C:\Qt\6.8\msvc2022_64)
+     - if [%buildPlatform%]==[x86] (set QT_VER=5) 
+     - if [%buildPlatform%]==[x86] (set QT=C:\Qt\5.15.2\msvc2019)
+     - set QT_DIR=%QT%
+     - set PATH=%PATH%;%QT%\bin;%QT%\lib\cmake
+     
+    before_build:
+     - mkdir build
+     - cd build
+     
+    build_script:
+      - if [%buildPlatform%]==[x64] (cmake .. -A x64 -DCOMMIT_HASH:STRING="\""%APPVEYOR_REPO_COMMIT%"\"" )
+      - if [%buildPlatform%]==[x86] (cmake .. -A Win32 -DCOMMIT_HASH:STRING="\""%APPVEYOR_REPO_COMMIT%"\"" )
+      - cmake --build . --config %buildConfig%
+
+    after_build:
+     - mkdir %artifactName%
+     - set DLL_SUFFIX=.dll
+     - if [%buildConfig%]==[Debug] (set DLL_SUFFIX=d.dll)
+     - cp -r pe-bear/%buildConfig%/* %artifactName%
+     - cp "%QT%\bin\Qt%QT_VER%Core%DLL_SUFFIX%" %artifactName%
+     - cp "%QT%\bin\Qt%QT_VER%Gui%DLL_SUFFIX%" %artifactName%
+     - cp "%QT%\bin\Qt%QT_VER%Widgets%DLL_SUFFIX%" %artifactName%
+     - mkdir %artifactName%\platforms
+     - mkdir %artifactName%\styles
+     - mkdir %artifactName%\imageformats
+     - cp "%QT%\plugins\platforms\qwindows%DLL_SUFFIX%" %artifactName%\platforms
+     - cp "%QT%\plugins\imageformats\qico%DLL_SUFFIX%" %artifactName%\imageformats
+     - if [%QT_VER%]==[5] (cp "%QT%\plugins\styles\qwindowsvistastyle%DLL_SUFFIX%" %artifactName%\styles)
+     - if [%QT_VER%]==[6] (cp "%QT%\plugins\styles\qmodernwindowsstyle%DLL_SUFFIX%" %artifactName%\styles)
+
+    artifacts:
+     - path: build\%artifactName%
+     

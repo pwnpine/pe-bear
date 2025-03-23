@@ -1,0 +1,21 @@
+Source: pe-bear
+Section: unknown
+Priority: optional
+Maintainer: Joe <joe@rstrike.my.id>
+Rules-Requires-Root: no
+Build-Depends:
+ debhelper-compat (= 13),
+ cmake,
+Standards-Version: 4.6.2
+Homepage: https://github.com/hasherezade/pe-bear
+Vcs-Browser: https://github.com/pwnpine/pe-bear
+Vcs-Git: https://github.com/pwnpine/pe-bear
+
+Package: pe-bear
+Architecture: any
+Multi-Arch: foreign
+Depends:
+ qt5ct,
+ ${shlibs:Depends},
+ ${misc:Depends},
+Description: Portable Executable reversing tool with a friendly GUI.
